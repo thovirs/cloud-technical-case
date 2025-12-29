@@ -2,32 +2,20 @@ public with sharing class ApplicationProcessingService {
 
     public static ApplicationFormController.ApplicationResult processApplication(ApplicationFormController.ApplicationDTO app) {
 
-        // business logic: 
-        // 1. Check if an Account with the Tax Id exists
-        // 2. If exists, create an Opportunity under that Account
-        // o	Name: app.companyName + ' - New Application'
-        // o	StageName: Prospecting
-        // o	CloseDate: Today + 30 days
-        // o	AccountId: the matched account
-        // o	Application_Source__c: Community or Webhook
-        // If not exists, create a Lead
-        // o	FirstName, LastName, Email, Phone
-        // o	Company = app.companyName
-        // o	Federal_Tax_Id__c = app.federalTaxId
-        // o	Application_Source__c: Community or Webhook
-        // Return the created record type and Id.
-
-        // Placeholder for processing logic
         ApplicationFormController.ApplicationResult result = new ApplicationFormController.ApplicationResult();
         
-        // should use stripInaccessible here?
         Account matchedAccount;
-        if (!String.isBlank(app.federalTaxId)) {
-            List<Account> accs = [SELECT Id FROM Account WHERE Federal_Tax_Id__c = :app.federalTaxId LIMIT 1];
-            matchedAccount = accs.isEmpty() ? null : accs[0];
-        } else if (!String.isBlank(app.companyName)) {
-            List<Account> accs = [SELECT Id FROM Account WHERE Name = :app.companyName LIMIT 1];
-            matchedAccount = accs.isEmpty() ? null : accs[0];
+        List<Account> accs = [SELECT Id, Name, Federal_Tax_Id__c FROM Account WHERE Federal_Tax_Id__c = :app.federalTaxId OR Name = :app.companyName];
+        for (Account acc : accs) {
+            System.debug('Matched Account: ' + acc);
+            // prefer Tax Id match over Name match
+            if(acc.Federal_Tax_Id__c == app.federalTaxId) {
+                matchedAccount = acc;
+                break;
+            } 
+            if(matchedAccount == null && acc.Name == app.companyName) {
+                matchedAccount = acc;
+            }
         }
 
         if (matchedAccount != null) {
@@ -41,6 +29,7 @@ public with sharing class ApplicationProcessingService {
             if (!String.isBlank(app.applicationSource)) {
                 newOpportunity.Application_Source__c = app.applicationSource;
             }
+
             insert newOpportunity;
 
             result.success = true;
@@ -62,6 +51,7 @@ public with sharing class ApplicationProcessingService {
             if (!String.isBlank(app.applicationSource)) {
                 newLead.Application_Source__c = app.applicationSource;
             }
+
             insert newLead;
 
             result.message = 'Lead created successfully: ' + newLead.Id;
@@ -72,6 +62,4 @@ public with sharing class ApplicationProcessingService {
         return result;
 
     }
-
-    
 }
