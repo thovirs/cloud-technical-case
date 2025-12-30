@@ -1,18 +1,184 @@
-# Salesforce DX Project: Next Steps
+# Salesforce Developer Case Study – Public Application Form & Webhook
 
-Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
+This repository contains the solution for the Salesforce Developer Case Study, implementing a public application intake via Experience Cloud and a public REST webhook that share the same business logic.
 
-## How Do You Plan to Deploy Your Changes?
+---
 
-Do you want to deploy a set of changes, or create a self-contained application? Choose a [development model](https://developer.salesforce.com/tools/vscode/en/user-guide/development-models).
+## 🚀 Solution Overview
 
-## Configure Your Salesforce DX Project
+The solution is composed of four main layers:
 
-The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
+1. Experience Cloud (Public Form – LWC)
+2. Apex Controller (Form submission)
+3. Shared Application Processing Service
+4. Public Apex REST Webhook
 
-## Read All About It
+Both the UI form and the webhook reuse the same processing service to ensure consistency and avoid duplicated business logic.
 
-- [Salesforce Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-- [Salesforce CLI Setup Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_intro.htm)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
+---
+
+## 🧱 Architecture
+
+LWC (Public Form)  
+↓  
+ApplicationFormController  
+↓  
+ApplicationProcessingService  
+↑  
+Apex REST Webhook (Public)
+
+---
+
+## 📄 Part A – Public Application Form (Experience Cloud)
+
+### LWC
+- Name: `applicationForm`
+- Deployed on a public Experience Cloud page
+- Collects:
+  - Company Name
+  - Federal Tax ID
+  - Contact First Name
+  - Contact Last Name
+  - Email
+  - Phone
+  - Annual Revenue (optional)
+
+### Features
+- Client-side validation
+- Loading state
+- Success and error messages
+- Displays:
+  - Created record type (Lead or Opportunity)
+  - Record Id
+
+### Experience Cloud URL
+https://thovirs-dev-ed.my.site.com/
+
+---
+
+## 📄 Part B – Public Webhook (Apex REST)
+
+### Endpoint
+POST https://thovirs-dev-ed.my.salesforce-sites.com/services/apexrest/external/applications
+
+### Expected JSON Payload
+{
+  "companyName": "Acme Corp",
+  "federalTaxId": "BG123456789",
+  "contact": {
+    "firstName": "Ivan",
+    "lastName": "Ivanov",
+    "email": "ivan@example.com",
+    "phone": "+359888123456"
+  },
+  "annualRevenue": 500000
+}
+
+### Response (Success)
+{
+  "success": true,
+  "recordType": "Opportunity",
+  "recordId": "006XXXXXXXXXXXX",
+  "message": "Application processed successfully"
+}
+
+### Response (Error)
+{
+  "success": false,
+  "message": "<error message>"
+}
+
+---
+
+## 🧠 Shared Business Logic – ApplicationProcessingService
+
+The ApplicationProcessingService centralizes all business rules and is reused by both the Experience Cloud form and the REST webhook.
+
+### Rules
+- If an Account exists with a matching Federal_Tax_Id__c → create an Opportunity
+- If no Tax ID match but Account Name matches → create an Opportunity
+- If no Account match → create a Lead
+- Application_Source__c is populated based on the input source:
+  - Community (Experience Cloud)
+  - Webhook (REST API)
+
+---
+
+## 🔐 Security & Setup Notes
+
+### Salesforce Site
+- Public REST access is exposed via a Force.com Site
+- Guest User permissions are required
+
+### Site Guest User – Required Permissions
+
+Apex Class Access:
+- ApplicationFormController
+- ApplicationProcessingService
+- ApplicationWebhookController
+
+Object Permissions:
+- Account: Read
+- Lead: Create
+- Opportunity: Create
+
+Field-Level Security:
+- Federal_Tax_Id__c
+- Application_Source__c
+- AnnualRevenue
+
+---
+
+## 🧪 Testing
+
+Test Class:
+- ApplicationProcessingServiceTest
+
+Covered Scenarios:
+1. Lead creation when no Account matches
+2. Opportunity creation via Tax ID match
+3. Opportunity creation via Name match when Tax ID is blank
+4. Correct handling of Application_Source__c (Webhook vs Community)
+
+Coverage:
+- 100% coverage for ApplicationProcessingService
+- No tests required for LWC (as per requirements)
+
+---
+
+## 📦 Deliverables
+
+Apex:
+- ApplicationFormController
+- ApplicationWebhookController
+- ApplicationProcessingService
+- DTO and wrapper classes
+- Test class(es)
+
+LWC:
+- applicationForm.html
+- applicationForm.js
+- applicationForm.js-meta.xml
+
+Documentation:
+- README with setup instructions, usage and assumptions
+
+---
+
+## 📝 Assumptions
+
+- UI form reset after submission was intentionally not implemented to simplify testing.
+- Application_Source__c is always explicitly provided by the caller (no default values are enforced).
+- Minimal server-side validation is performed, assuming client-side validation is already in place.
+
+---
+
+## ✅ Conclusion
+
+This implementation demonstrates:
+- Public Experience Cloud development
+- Apex REST APIs
+- DTO-based architecture
+- Shared business services
+- Secure guest access configuration
+- Clean, testable Apex design
