@@ -29,6 +29,56 @@ Apex REST Webhook (Public)
 
 ---
 
+## ⚙️ Deployment & Setup Guide
+
+### Prerequisites
+- Salesforce CLI (sf)
+- A Salesforce org (Developer Edition, Trailhead Playground or Sandbox)
+
+### 1. Clone the repository
+git clone https://github.com/<your-username>/<repository-name>.git  
+cd <repository-name>
+
+### 2. Authenticate to your Salesforce org
+sf org login web -r https://login.salesforce.com -a cloudsquare-app
+
+Use https://test.salesforce.com if deploying to a Sandbox.
+
+### 3. Deploy metadata
+sf project deploy start -o cloudsquare-app
+
+### 4. Run tests (optional)
+sf apex run test -o cloudsquare-app -r human
+
+### 5. Post-deployment Configuration
+
+#### Experience Cloud
+- Create an Experience Cloud site
+- Publish the site
+- Add the applicationForm LWC to a public page
+
+#### Salesforce Site (for REST Webhook)
+- Create a Salesforce Site
+- Enable guest user access
+
+#### Site Guest User – Required Permissions
+
+Apex Class Access:
+- ApplicationFormController
+- ApplicationProcessingService
+- ApplicationWebhookController
+
+Object Permissions:
+- Account: Read
+- Lead: Create
+- Opportunity: Create
+
+Field-Level Security:
+- Federal_Tax_Id__c
+- Application_Source__c
+- AnnualRevenue
+
+
 ## 📄 Part A – Public Application Form (Experience Cloud)
 
 ### LWC
@@ -89,7 +139,6 @@ POST https://thovirs-dev-ed.my.salesforce-sites.com/services/apexrest/external/a
 }
 
 ---
-
 ## 🧠 Shared Business Logic – ApplicationProcessingService
 
 The ApplicationProcessingService centralizes all business rules and is reused by both the Experience Cloud form and the REST webhook.
@@ -109,23 +158,6 @@ The ApplicationProcessingService centralizes all business rules and is reused by
 ### Salesforce Site
 - Public REST access is exposed via a Force.com Site
 - Guest User permissions are required
-
-### Site Guest User – Required Permissions
-
-Apex Class Access:
-- ApplicationFormController
-- ApplicationProcessingService
-- ApplicationWebhookController
-
-Object Permissions:
-- Account: Read
-- Lead: Create
-- Opportunity: Create
-
-Field-Level Security:
-- Federal_Tax_Id__c
-- Application_Source__c
-- AnnualRevenue
 
 ---
 
